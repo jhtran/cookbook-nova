@@ -23,7 +23,6 @@ end
 
 include_recipe "mongodb"
 include_recipe "nova::nova-common"
-include_recipe "python::pip"
 
 api_logdir = '/var/log/ceilometer-api'
 nova_owner = node["nova"]["user"]
@@ -37,9 +36,6 @@ directory api_logdir do
   action :create
 end
 
-python_pip "ceilometer" do
-  action :install
-end
 
 directory "/etc/ceilometer" do
   owner nova_owner
@@ -51,14 +47,14 @@ end
 
 rabbit_server_role = node["nova"]["rabbit_server_chef_role"]
 rabbit_info = get_settings_by_role rabbit_server_role, "queue"
-
+#
 nova_setup_role = node["nova"]["nova_setup_chef_role"]
 nova_setup_info = get_settings_by_role nova_setup_role, "nova"
-
+#
 db_user = node['nova']['db']['username']
 db_pass = nova_setup_info['db']['password']
 sql_connection = db_uri("compute", db_user, db_pass)
-
+#
 keystone_service_role = node["nova"]["keystone_service_chef_role"]
 keystone = get_settings_by_role keystone_service_role, "keystone"
 
