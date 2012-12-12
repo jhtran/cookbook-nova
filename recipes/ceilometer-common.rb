@@ -21,12 +21,36 @@ class ::Chef::Recipe
   include ::Openstack
 end
 
-include_recipe "mongodb"
-include_recipe "nova::nova-common"
+#include_recipe "mongodb"
+#include_recipe "nova::nova-common"
+include_recipe "python::pip"
+
+ceilometer_packages = ['libxslt-dev', 'libxml2-dev']
+
+ceilometer_packages.each do |pkg|
+  package pkg do
+    action :upgrade
+  end
+end
 
 api_logdir = '/var/log/ceilometer-api'
-nova_owner = node["nova"]["user"]
-nova_group = node["nova"]["group"]
+#nova_owner = node["nova"]["user"]
+#nova_group = node["nova"]["group"]
+nova_owner = 'nova'
+nova_group = 'nova'
+
+#  Cleanup old installation
+python_pip "ceilometer" do
+  action :remove
+end
+
+bin_names = ['agent-compute', 'agent-central', 'collector', 'dbsync', 'api']
+bin_names.each do |bin_name|
+  file "ceilometer-#{bin_name}" do
+    action :delete
+  end
+end
+
 
 directory api_logdir do
   owner nova_owner
@@ -36,8 +60,9 @@ directory api_logdir do
   action :create
 end
 
+tmpdir = Chef::Config[:file_cache_path] + '/ceilometer'
 
-directory "/etc/ceilometer" do
+directory tmpdir do
   owner nova_owner
   group nova_group
   mode  00755
@@ -45,39 +70,59 @@ directory "/etc/ceilometer" do
   action :create
 end
 
-rabbit_server_role = node["nova"]["rabbit_server_chef_role"]
-rabbit_info = get_settings_by_role rabbit_server_role, "queue"
+directory "/etc/ceilometer" do
+  owner nova_owner
+  group nova_group
+  mode  00755
+  action :create
+end
+
+#rabbit_server_role = node["nova"]["rabbit_server_chef_role"]
+#rabbit_info = get_settings_by_role rabbit_server_role, "queue"
 #
-nova_setup_role = node["nova"]["nova_setup_chef_role"]
-nova_setup_info = get_settings_by_role nova_setup_role, "nova"
+#nova_setup_role = node["nova"]["nova_setup_chef_role"]
+#nova_setup_info = get_settings_by_role nova_setup_role, "nova"
 #
-db_user = node['nova']['db']['username']
-db_pass = nova_setup_info['db']['password']
-sql_connection = db_uri("compute", db_user, db_pass)
-#
-keystone_service_role = node["nova"]["keystone_service_chef_role"]
-keystone = get_settings_by_role keystone_service_role, "keystone"
+#db_user = node['nova']['db']['username']
+#db_pass = nova_setup_info['db']['password']
+#sql_connection = db_uri("compute", db_user, db_pass)
+sql_connection = 'mysql://db_user:db_pass@localhost/nova'
+#ceilometer_db_user = node['ceilometer']['db']['username']
+#ceilometer_db_pass = db_pass
+#ceilometer_db_connection = db_uri("ceilometer", ceilometer_db_user, ceilometer_db_pass)
+ceilometer_db_connection = 'mysql://ceilometer:mypassword@localhost/ceilometer'
+
+#keystone_service_role = node["nova"]["keystone_service_chef_role"]
+#keystone = get_settings_by_role keystone_service_role, "keystone"
 
 # find the node attribute endpoint settings for the server holding a given role
 identity_admin_endpoint = endpoint "identity-admin"
 
-Chef::Log.debug("nova::nova-common:rabbit_info|#{rabbit_info}")
-Chef::Log.debug("nova::nova-common:keystone|#{keystone}")
-Chef::Log.debug("nova::nova-common:identity_admin_endpoint|#{identity_admin_endpoint.to_s}")
+#Chef::Log.debug("nova::nova-common:rabbit_info|#{rabbit_info}")
+#Chef::Log.debug("nova::nova-common:keystone|#{keystone}")
+#Chef::Log.debug("nova::nova-common:identity_admin_endpoint|#{identity_admin_endpoint.to_s}")
 
-template "/etc/ceilometer/ceilometer.conf" do
+conf = "/etc/ceilometer/ceilometer.conf"
+
+template conf do
   source "ceilometer.conf.erb"
   owner  nova_owner
   group  nova_group
   mode   00644
   variables(
     :sql_connection => sql_connection,
-    :rabbit_ipaddress => rabbit_info["host"],
-    :rabbit_port => rabbit_info["port"],
-    :user => keystone["admin_user"],
-    :tenant => keystone["users"][keystone["admin_user"]]["default_tenant"],
-    :password => keystone["users"][keystone["admin_user"]]["password"],
+    #:rabbit_ipaddress => rabbit_info["host"],
+    :rabbit_ipaddress => 'localhost',
+    #:rabbit_port => rabbit_info["port"],
+    :rabbit_port => 5672,
+    #:user => keystone["admin_user"],
+    :user => 'admin',
+    #:tenant => keystone["users"][keystone["admin_user"]]["default_tenant"],
+    :tenant => 'admin',
+    #:password => keystone["users"][keystone["admin_user"]]["password"],
+    :password => 'none',
     :identity_admin_endpoint => identity_admin_endpoint
+    :database_connection => ceilometer_db_connection
   )
 end
 
@@ -86,4 +131,20 @@ cookbook_file "/etc/ceilometer/policy.json" do
   mode 0755
   owner nova_owner
   group nova_group
+end
+
+git tmpdir do
+  repo "git://github.com/openstack/ceilometer.git"
+  action :sync
+end
+
+python_pip tmpdir do
+  action :install
+end
+
+bash "migration" do
+  cwd tmpdir
+  code <<-EOF
+    ceilometer-dbsync --config-file=#{conf}
+  EOF
 end
