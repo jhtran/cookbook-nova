@@ -56,6 +56,6 @@ conf_switch = "--config-file #{ceilometer_conf}"
 service "ceilometer-api" do
   service_name "ceilometer-api"
   action [:start]
-  start_command "nohup #{bindir}/ceilometer-api -d --log-dir=#{api_logdir} #{conf_switch} &"
+  start_command "nohup #{bindir}/ceilometer-api -d #{conf_switch} &"
   stop_command "pkill -f ceilometer-api"
 end
