@@ -100,6 +100,7 @@ ceilo_db_user = node['nova']['ceilometer']['db']['username']
 ceilo_db_pass = db_password "ceilometer"
 ceilo_db_query = ceilo_db_info['db_type'] == 'mysql' ? '?charset=utf8' : nil
 ceilo_db_uri = db_uri("metering", ceilo_db_user, ceilo_db_pass).to_s + ceilo_db_query
+periodic_interval = node['nova']['ceilometer']['periodic_interval']
 
 service_user = node["nova"]["service_username"]
 service_pass = service_password "nova"
@@ -123,6 +124,7 @@ template ceilometer_conf do
     :auth_uri => auth_uri,
     :database_connection => ceilo_db_uri,
     :identity_endpoint => identity_admin_endpoint,
+    :periodic_interval => periodic_interval,
     :rabbit_ipaddress => rabbit_ipaddress,
     :rabbit_pass => rabbit_pass,
     :rabbit_port => rabbit_port,
