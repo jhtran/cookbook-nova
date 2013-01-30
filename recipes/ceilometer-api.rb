@@ -27,6 +27,11 @@ api_logdir = node["nova"]["ceilometer"]["api_logdir"]
 nova_owner = node["nova"]["user"]
 nova_group = node["nova"]["group"]
 
+# ceilometer-api requires pymongo even if not using mongodb
+python_pip 'pymongo' do
+  action :install
+end
+
 directory api_logdir do
   owner nova_owner
   group nova_group

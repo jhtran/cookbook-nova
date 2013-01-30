@@ -236,7 +236,8 @@ end
 
 # ceilometer specific attrs
 default["nova"]["ceilometer"]["api_logdir"] = "/var/log/ceilometer-api"
-default["nova"]["ceilometer"]["branch"] = 'stable/folsom'
+default["nova"]["ceilometer"]["repo"] = 'git@github.com:att-cloud/ceilometer.git'
+default["nova"]["ceilometer"]["branch"] = 'stable/folsom-att'
 default["nova"]["ceilometer"]["conf"] = "/etc/ceilometer/ceilometer.conf"
 default["nova"]["ceilometer"]["db"]["username"] = 'ceilometer'
 default["nova"]["ceilometer"]["dependent_pkgs"] = ['libxslt-dev', 'libxml2-dev']

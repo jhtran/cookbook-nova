@@ -61,9 +61,10 @@ directory install_dir do
   action :create
 end
 
+git_repo = node["nova"]["ceilometer"]["repo}]
 branch = node["nova"]["ceilometer"]["branch"]
 git install_dir do
-  repo "git://github.com/openstack/ceilometer.git"
+  repo git_repo
   reference branch
   action :sync
 end
