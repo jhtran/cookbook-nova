@@ -243,3 +243,4 @@ default["nova"]["ceilometer"]["conf"] = "/etc/ceilometer/ceilometer.conf"
 default["nova"]["ceilometer"]["db"]["username"] = 'ceilometer'
 default["nova"]["ceilometer"]["dependent_pkgs"] = ['libxslt-dev', 'libxml2-dev']
 default["nova"]["ceilometer"]["install_dir"] = '/opt/ceilometer'
+default["nova"]["ceilometer"]["syslog"]["use"] = false
